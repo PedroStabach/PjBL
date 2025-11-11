@@ -1,8 +1,9 @@
 package Models;
 
+import java.sql.SQLOutput;
 import java.util.List;
 
-public class Usuario {
+abstract class Usuario {
     private int id;
     private String nome;
     private String endereco;
@@ -19,9 +20,7 @@ public class Usuario {
     String getEndereco() { return this.endereco;}
     String getStatus() {return this.status;}
     String getEmprestimos() {
-       return (for (emprestimo e: emprestimos) {
-           e //
-        });
+       return this.emprestimos.toString();
     }
 
     void setNome(String nome) {
