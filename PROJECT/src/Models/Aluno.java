@@ -1,11 +1,13 @@
 package Models;
 
+import java.util.Calendar;
+import java.util.Date;
+
 public class Aluno extends Usuario {
     private String matricula;
     private String curso;
-    private int limiteEmprestimo = 3;;
-    public Aluno (int id, String nome, String endereco, String status, String matricula, String curso) {
-        super(id, nome, endereco, status);
+    public Aluno (int id, String nome, String endereco, String matricula, String curso) {
+        super(id, nome, endereco, 3);
         this.matricula = matricula;
         this.curso = curso;
     }
@@ -21,10 +23,10 @@ public class Aluno extends Usuario {
     public void setCurso(String curso) {
         this.curso = curso;
     }
-    public int getLimiteEmprestimo() {
-        return limiteEmprestimo;
-    }
-    public void setLimiteEmprestimo(int limiteEmprestimo) {
-        this.limiteEmprestimo = limiteEmprestimo;
+    public Date calculaPrazoDevolucao() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, 7); // alunos têm 7 dias de prazo
+        return cal.getTime();
     }
 }
+

@@ -3,36 +3,53 @@ package Models;
 import java.sql.SQLOutput;
 import java.util.List;
 import Events.Emprestimo;
+import java.util.Date;
 abstract public class Usuario {
     private int id;
     private String nome;
     private String endereco;
     private String status = "Ativo";
     private List<Emprestimo> emprestimos;
+    private int limiteEmprestimo;
 
-    public Usuario(int id, String nome, String endereco, String status) {
+    public Usuario(int id, String nome, String endereco, int limiteEmprestimo) {
         this.id = id;
         this.nome = nome;
         this.endereco = endereco;
-        this.status = status;
+        this.limiteEmprestimo = limiteEmprestimo;
     }
-    String getNome() {return this.nome;}
-    String getEndereco() { return this.endereco;}
-    String getStatus() {return this.status;}
-    String getEmprestimos() {
+    public String getNome() {return this.nome;}
+    public String getEndereco() { return this.endereco;}
+    public String getStatus() {return this.status;}
+    public String getEmprestimos() {
        return this.emprestimos.toString();
     }
 
-    void setNome(String nome) {
+    public void setNome(String nome) {
         this.nome = nome;
     }
-    void setEndereco(String endereco) {
+    public void setEndereco(String endereco) {
         this.endereco = endereco;
     }
-    void setStatus(String status) {
+    public void setStatus(String status) {
         this.status = status;
     }
     //fazer funcoes da lista
+
+    public boolean isAptoParaEmprestimo() {
+        if (this.status == "Ativo" &&  this.limiteEmprestimo > this.emprestimos.toArray().length) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    abstract public Date calculaPrazoDevolucao();
+
+    public void adicionarEmprestimo(Emprestimo e) {
+        if (isAptoParaEmprestimo()) emprestimos.add(e);
+        else System.out.println("Nao foi possivel fazer emprestimo");
+    }
 
 }
 

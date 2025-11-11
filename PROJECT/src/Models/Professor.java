@@ -1,11 +1,12 @@
 package Models;
 
+import java.util.Date;
+import java.util.Calendar;
 public class Professor extends Usuario {
     private String siape;
     private String departamento;
-    private int limiteEmprestimo = 5;
-    public Professor(int id, String nome, String endereco, String status, String siape, String departamento) {
-        super(id, nome, endereco, status);
+    public Professor(int id, String nome, String endereco, String siape, String departamento) {
+        super(id, nome, endereco, 5);
         this.siape = siape;
         this.departamento = departamento;
     }
@@ -22,5 +23,10 @@ public class Professor extends Usuario {
         this.departamento = departamento;
     }
 
-
+    @Override
+    public Date calculaPrazoDevolucao() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, 7); // alunos têm 7 dias de prazo
+        return cal.getTime();
+        }
 }
