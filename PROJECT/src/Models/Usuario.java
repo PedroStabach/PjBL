@@ -2,13 +2,13 @@ package Models;
 
 import java.sql.SQLOutput;
 import java.util.List;
-
-abstract class Usuario {
+import Events.Emprestimo;
+abstract public class Usuario {
     private int id;
     private String nome;
     private String endereco;
     private String status = "Ativo";
-    private List<emprestimo> emprestimos;
+    private List<Emprestimo> emprestimos;
 
     public Usuario(int id, String nome, String endereco, String status) {
         this.id = id;
