@@ -5,14 +5,14 @@ import java.util.List;
 import Events.Emprestimo;
 import java.util.Date;
 abstract public class Usuario {
-    private int id;
+    private String id;
     private String nome;
     private String endereco;
     private String status = "Ativo";
     private List<Emprestimo> emprestimos;
     private int limiteEmprestimo;
 
-    public Usuario(int id, String nome, String endereco, int limiteEmprestimo) {
+    public Usuario(String id, String nome, String endereco, int limiteEmprestimo) {
         this.id = id;
         this.nome = nome;
         this.endereco = endereco;
@@ -23,6 +23,10 @@ abstract public class Usuario {
     public String getStatus() {return this.status;}
     public String getEmprestimos() {
        return this.emprestimos.toString();
+    }
+
+    public String getId() {
+        return id;
     }
 
     public void setNome(String nome) {

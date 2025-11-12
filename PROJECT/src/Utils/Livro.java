@@ -4,7 +4,7 @@ public class Livro extends ItemDeAcervo {
     private String autor;
     private String isbn;
     private int edicao;
-    Livro(String codigo, String titulo, String anoPublicacao, String autor, String isbn, int edicao) {
+    public Livro(String codigo, String titulo, String anoPublicacao, String autor, String isbn, int edicao) {
         super(codigo, titulo, anoPublicacao);
         this.autor = autor;
         this.isbn = isbn;

@@ -1,6 +1,9 @@
 package Events;
 import Models.Usuario;
 import Utils.ItemDeAcervo;
+
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.Date;
 
 public class Emprestimo {
@@ -80,4 +83,24 @@ public class Emprestimo {
     public void setMultaCobrada(double multaCobrada) {
         this.multaCobrada = multaCobrada;
     }
+
+    public double calcularMulta(Date dataDevolucaoReal) {
+        long dataEmprestimoMillis = item.getDataEmprestimo().getTime();
+        long dataDevolucaoMillis = dataDevolucaoReal.getTime();
+
+        long diffEmMillis = dataDevolucaoMillis - dataEmprestimoMillis;
+        long dias = diffEmMillis / (1000 * 60 * 60 * 24); // converte ms → dias
+
+        // valor da multa por dia
+        double valorPorDia = 1.2;
+
+        if (dias < 0) dias = 0; // evita multa negativa caso devolvido antes
+
+        return dias * valorPorDia;
+    }
+
+    public void finalizarEmprestimo(Date dataDevolucaoReal) {
+        calcularMulta(dataDevolucaoReal);
+    }
+
 }

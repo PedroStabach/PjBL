@@ -1,10 +1,13 @@
 package Utils;
 
+import java.util.Date;
+
 abstract public class ItemDeAcervo {
     private String codigo;
     private String titulo;
     private String anoPublicacao;
     private boolean isEmprestado = false;
+    private Date dataEmprestimo;
 
     public ItemDeAcervo(String codigo, String titulo, String anoPublicacao) {
         this.codigo = codigo;
@@ -35,5 +38,17 @@ abstract public class ItemDeAcervo {
     }
     public void setEmprestado(boolean emprestado) {
         isEmprestado = emprestado;
+    }
+    public Date getDataEmprestimo() {
+        return dataEmprestimo;
+    }
+
+    void emprestar(){
+        isEmprestado = true;
+        dataEmprestimo = new Date();
+    }
+    void devolver() {
+        isEmprestado = false;
+        dataEmprestimo = null;
     }
 }

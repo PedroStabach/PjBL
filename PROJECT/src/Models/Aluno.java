@@ -6,7 +6,7 @@ import java.util.Date;
 public class Aluno extends Usuario {
     private String matricula;
     private String curso;
-    public Aluno (int id, String nome, String endereco, String matricula, String curso) {
+    public Aluno (String id, String nome, String endereco, String matricula, String curso) {
         super(id, nome, endereco, 3);
         this.matricula = matricula;
         this.curso = curso;

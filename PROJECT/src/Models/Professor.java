@@ -5,7 +5,7 @@ import java.util.Calendar;
 public class Professor extends Usuario {
     private String siape;
     private String departamento;
-    public Professor(int id, String nome, String endereco, String siape, String departamento) {
+    public Professor(String id, String nome, String endereco, String siape, String departamento) {
         super(id, nome, endereco, 5);
         this.siape = siape;
         this.departamento = departamento;
