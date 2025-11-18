@@ -1,59 +1,54 @@
 package Models;
 
-import java.sql.SQLOutput;
-import java.util.List;
-import Events.Emprestimo;
 import java.util.Date;
-abstract public class Usuario {
-    private String id;
-    private String nome;
-    private String endereco;
-    private String status = "Ativo";
-    private List<Emprestimo> emprestimos;
-    private int limiteEmprestimo;
 
-    public Usuario(String id, String nome, String endereco, int limiteEmprestimo) {
+public abstract class Usuario {
+
+    protected String id;
+    protected String nome;
+    protected String endereco;
+
+    protected int emprestimosAtivos = 0;
+    protected double multaPendente = 0;
+
+    public Usuario(String id, String nome, String endereco) {
         this.id = id;
         this.nome = nome;
         this.endereco = endereco;
-        this.limiteEmprestimo = limiteEmprestimo;
-    }
-    public String getNome() {return this.nome;}
-    public String getEndereco() { return this.endereco;}
-    public String getStatus() {return this.status;}
-    public String getEmprestimos() {
-       return this.emprestimos.toString();
     }
 
-    public String getId() {
-        return id;
+    // ================== GETTERS NECESSÁRIOS ==================
+    public String getId() { return id; }
+    public String getNome() { return nome; }
+    public String getEndereco() { return endereco; }
+
+    // ================== POLIMORFISMO ==================
+    public abstract Date calcularDataDevolucao();
+    public abstract int getLimiteEmprestimos();
+
+    // ================== CONTROLE ==================
+    public int getEmprestimosAtivos() {
+        return emprestimosAtivos;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-    public void setEndereco(String endereco) {
-        this.endereco = endereco;
-    }
-    public void setStatus(String status) {
-        this.status = status;
-    }
-    //fazer funcoes da lista
-
-    public boolean isAptoParaEmprestimo() {
-        if (this.status == "Ativo" &&  this.limiteEmprestimo > this.emprestimos.toArray().length) {
-            return true;
-        } else {
-            return false;
-        }
+    public void incrementarEmprestimos() {
+        emprestimosAtivos++;
     }
 
-    abstract public Date calculaPrazoDevolucao();
-
-    public void adicionarEmprestimo(Emprestimo e) {
-        if (isAptoParaEmprestimo()) emprestimos.add(e);
-        else System.out.println("Nao foi possivel fazer emprestimo");
+    public void decrementarEmprestimos() {
+        emprestimosAtivos--;
     }
 
+    // ================== MULTA / BLOQUEIO ==================
+    public double getMultaPendente() {
+        return multaPendente;
+    }
+
+    public void adicionarMulta(double valor) {
+        multaPendente += valor;
+    }
+
+    public boolean possuiBloqueio() {
+        return multaPendente > 0;
+    }
 }
-

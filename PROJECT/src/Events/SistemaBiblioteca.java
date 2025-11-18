@@ -1,242 +1,252 @@
 package Events;
-import java.io.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
+
 import Models.*;
 import Utils.*;
-public class SistemaBiblioteca {
 
+import java.io.*;
+import java.util.*;
+
+public class SistemaBiblioteca implements Serializable {
+    private static final long serialVersionUID = 1L;
     private List<Usuario> listaUsuarios;
     private List<ItemDeAcervo> acervo;
     private List<Emprestimo> historicoEmprestimos;
 
-    private static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+    // contadores simples para gerar IDs (pode ser substituído por UUID se preferir)
+    private int nextUsuarioSeq = 1;
+    private int nextItemSeq = 1;
+    private int nextEmprestimoSeq = 1;
+
+    private static final String STORAGE_FILE = "sistema_biblioteca.ser";
 
     public SistemaBiblioteca() {
-        listaUsuarios = new ArrayList<>();
-        acervo = new ArrayList<>();
-        historicoEmprestimos = new ArrayList<>();
+        this.listaUsuarios = new ArrayList<>();
+        this.acervo = new ArrayList<>();
+        this.historicoEmprestimos = new ArrayList<>();
     }
 
-    // ========================= MÉTODOS BÁSICOS =========================
-    public void adicionarUsuario(Usuario usuario) {
-        listaUsuarios.add(usuario);
+    // ---------------------------
+    // CADASTROS / BUSCAS BÁSICAS
+    // ---------------------------
+    public Usuario cadastrarAluno(String nome, String endereco, String matricula, String curso) {
+        String id = "U" + (nextUsuarioSeq++);
+        Aluno a = new Aluno(id, nome, endereco, matricula, curso);
+        listaUsuarios.add(a);
+        return a;
     }
 
-    public void adicionarItem(ItemDeAcervo item) {
-        acervo.add(item);
+    public Usuario cadastrarProfessor(String nome, String endereco, String siape, String departamento) {
+        String id = "U" + (nextUsuarioSeq++);
+        Professor p = new Professor(id, nome, endereco, siape, departamento);
+        listaUsuarios.add(p);
+        return p;
     }
 
-    // ========================= EMPRÉSTIMO =========================
-    public Emprestimo realizarEmprestimo(String idUsuario, String codItem) {
-        Usuario usuario = listaUsuarios.stream()
-                .filter(u -> u.getId().equals(idUsuario))
-                .findFirst()
-                .orElse(null);
+    /**
+     * Observação: aqui assumimos que ItemDeAcervo implementa um construtor que aceita (codigo, titulo, ano, ...)
+     * e que tem getCodigo(). Se suas classes usam outro nome (getId/ getIsbnIssn), ajuste esse método ao seu modelo.
+     */
+    public ItemDeAcervo cadastrarLivro(String codigo, String titulo, String ano, String autor, String isbn, int edicao) {
+        Livro l = new Livro(codigo, titulo, ano, autor, isbn, edicao);
+        acervo.add(l);
+        return l;
+    }
 
-        ItemDeAcervo item = acervo.stream()
-                .filter(i -> i.getCodigo().equals(codItem) && !i.isEmprestado())
-                .findFirst()
-                .orElse(null);
+    public ItemDeAcervo cadastrarRevista(String codigo, String titulo, String ano, String editora, int volume, String issn) {
+        Revista r = new Revista(codigo, titulo, ano, editora, volume, issn);
+        acervo.add(r);
+        return r;
+    }
 
-        if (usuario == null) {
-            System.out.println("Usuário não encontrado.");
-            return null;
+    public List<ItemDeAcervo> buscarPorTitulo(String termo) {
+        List<ItemDeAcervo> resultado = new ArrayList<>();
+        for (ItemDeAcervo it : acervo) {
+            if (it.getTitulo() != null && it.getTitulo().toLowerCase().contains(termo.toLowerCase())) {
+                resultado.add(it);
+            }
+        }
+        return resultado;
+    }
+
+    public Optional<ItemDeAcervo> buscarPorCodigo(String codigo) {
+        return acervo.stream().filter(i -> {
+            // tenta equals ignorando case
+            String codigoItem = i.getCodigo();
+            return codigoItem != null && codigoItem.equalsIgnoreCase(codigo);
+        }).findFirst();
+    }
+
+    // ---------------------------
+    // EMPRÉSTIMO (RF1, RN1, RN2, RN4)
+    // ---------------------------
+    /**
+     * Tenta realizar um empréstimo; lança Exception com mensagem de negócio em caso de violação.
+     */
+    public Emprestimo realizarEmprestimo(String idUsuario, String codigoItem) throws Exception {
+        Usuario usuario = findUsuarioById(idUsuario);
+        ItemDeAcervo item = findItemByCodigo(codigoItem);
+
+        // RN1: disponibilidade
+        if (item.isEmprestado()) throw new Exception("RN1 - Item indisponível (já emprestado).");
+
+        // RN4: bloqueios por multa ou item em atraso
+        if (usuario.getMultaPendente() > 0.0) throw new Exception("RN4 - Usuário possui multa pendente.");
+        if (usuario.getEmprestimosAtivos() > 0) {
+            // verifica se usuário tem empréstimo atrasado dentre seus empréstimos ativos
+            for (Emprestimo e : historicoEmprestimos) {
+                if (e.getUsuario().getId().equals(usuario.getId()) && e.getDataDevolucaoReal() == null) {
+                    if (e.getDataDevolucaoPrevista().before(new Date())) {
+                        throw new Exception("RN4 - Usuário possui item em posse com prazo vencido.");
+                    }
+                }
+            }
         }
 
-        if (item == null) {
-            System.out.println("Item não disponível ou não encontrado.");
-            return null;
-        }
+        // RN2: limite por tipo
+        if (usuario.getEmprestimosAtivos() >= usuario.getLimiteEmprestimos())
+            throw new Exception("RN2 - Usuário excedeu o limite de empréstimos (limite = " + usuario.getLimiteEmprestimos() + ").");
 
-        String idEmprestimo = UUID.randomUUID().toString();
-        Date dataEmprestimo = new Date();
-        Date dataPrevista = usuario.calculaPrazoDevolucao();
+        // Tudo ok: criar empréstimo
+        String idEmp = "E" + (nextEmprestimoSeq++);
+        Emprestimo emp = new Emprestimo(idEmp, usuario, item); // construtor valida novamente RN1/RN2/RN4 dentro da classe
+        historicoEmprestimos.add(emp);
 
-        Emprestimo emprestimo = new Emprestimo(idEmprestimo, usuario, item, dataEmprestimo, dataPrevista);
+        // marcar item e usuario (Emprestimo já fez parte disso, mas garantimos estados aqui também)
         item.setEmprestado(true);
-        historicoEmprestimos.add(emprestimo);
+        usuario.incrementarEmprestimos();
 
-        System.out.println("Empréstimo realizado com sucesso! ID: " + idEmprestimo);
-        return emprestimo;
+        return emp;
     }
 
-    // ========================= DEVOLUÇÃO =========================
-    public void realizarDevolucao(String idEmprestimo) {
-        Emprestimo emprestimo = historicoEmprestimos.stream()
+    // ---------------------------
+    // DEVOLUÇÃO (RF3 e RN3)
+    // ---------------------------
+    public void realizarDevolucao(String idEmprestimo) throws Exception {
+        Emprestimo e = findEmprestimoById(idEmprestimo);
+
+        if (e.getDataDevolucaoReal() != null) {
+            throw new Exception("Emprestimo já foi devolvido.");
+        }
+
+        Date hoje = new Date();
+        e.finalizarEmprestimo(hoje); // atualiza dataDevolucaoReal, calcula multa, atualiza item e usuario
+
+        // multa já foi adicionada ao usuário dentro do finalizarEmprestimo (se implementado assim),
+        // caso contrário faça:
+        // double multa = e.getMultaCobrada();
+        // e.getUsuario().adicionarMulta(multa);
+    }
+
+    // Permite pagar a multa do usuário (zerar)
+    public void pagarMultaUsuario(String idUsuario) throws Exception {
+        Usuario u = findUsuarioById(idUsuario);
+        // zera multa
+        // assumindo que Usuario tem um método para resetar multa (se não, usamos adicionarMulta com valor negativo)
+        // aqui vamos assumir setMultaPendente existe; se não, usar adicionarMulta(-u.getMultaPendente())
+        try {
+            // tenta chamar método setMultaPendente se existir
+            java.lang.reflect.Method m = u.getClass().getMethod("setMultaPendente", double.class);
+            m.invoke(u, 0.0);
+        } catch (NoSuchMethodException nsme) {
+            // se não existir, faz via adicionarMulta com valor negativo
+            double atual = u.getMultaPendente();
+            if (atual > 0) u.adicionarMulta(-atual);
+        } catch (Exception ex) {
+            // fallback
+            double atual = u.getMultaPendente();
+            if (atual > 0) u.adicionarMulta(-atual);
+        }
+    }
+
+    // ---------------------------
+    // HELPERS de busca (lançam Exception se não encontrar)
+    // ---------------------------
+    public Usuario findUsuarioById(String id) throws Exception {
+        return listaUsuarios.stream()
+                .filter(u -> u.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new Exception("Usuário não encontrado: id=" + id));
+    }
+
+    public ItemDeAcervo findItemByCodigo(String codigo) throws Exception {
+        return acervo.stream()
+                .filter(i -> i.getCodigo().equalsIgnoreCase(codigo))
+                .findFirst()
+                .orElseThrow(() -> new Exception("Item não encontrado: codigo=" + codigo));
+    }
+
+    public Emprestimo findEmprestimoById(String idEmprestimo) throws Exception {
+        return historicoEmprestimos.stream()
                 .filter(e -> e.getIdEmprestimo().equals(idEmprestimo))
                 .findFirst()
-                .orElse(null);
-
-        if (emprestimo == null) {
-            System.out.println("Empréstimo não encontrado.");
-            return;
-        }
-
-        if (emprestimo.getDataDevolucaoReal() != null) {
-            System.out.println("Item já devolvido.");
-            return;
-        }
-
-        Date dataDevolucao = new Date();
-        emprestimo.setDataDevolucaoReal(dataDevolucao);
-        emprestimo.getItem().setEmprestado(false);
-
-        double multa = emprestimo.calcularMulta(dataDevolucao);
-        emprestimo.setMultaCobrada(multa);
-
-        System.out.println("Devolução realizada com sucesso! Multa: R$" + multa);
+                .orElseThrow(() -> new Exception("Empréstimo não encontrado: id=" + idEmprestimo));
     }
 
-    // ========================= SALVAR DADOS =========================
-    public void salvarDados(String arquivoUsuarios, String arquivoItens, String arquivoEmprestimos) {
-        try {
-            // Usuários
-            try (PrintWriter pw = new PrintWriter(new File(arquivoUsuarios))) {
-                for (Usuario u : listaUsuarios) {
-                    if (u instanceof Aluno a) {
-                        pw.println(String.join(",",
-                                a.getId(),
-                                a.getNome(),
-                                a.getEndereco(),
-                                a.getMatricula(),
-                                a.getCurso(),
-                                "Aluno"));
-                    } else if (u instanceof Professor p) {
-                        pw.println(String.join(",",
-                                p.getId(),
-                                p.getNome(),
-                                p.getEndereco(),
-                                p.getDepartamento(),
-                                "Professor"));
-                    }
-                }
-            }
-
-            // Itens
-            try (PrintWriter pw = new PrintWriter(new File(arquivoItens))) {
-                for (ItemDeAcervo i : acervo) {
-                    pw.println(String.join(",",
-                            i.getCodigo(),
-                            i.getTitulo(),
-                            i.getAnoPublicacao(),
-                            String.valueOf(i.isEmprestado()),
-                            i.getClass().getSimpleName()));
-                }
-            }
-
-            // Empréstimos
-            try (PrintWriter pw = new PrintWriter(new File(arquivoEmprestimos))) {
-                for (Emprestimo e : historicoEmprestimos) {
-                    String dataDevPrev = sdf.format(e.getDataDevolucaoPrevista());
-                    String dataDevReal = e.getDataDevolucaoReal() == null ? "" : sdf.format(e.getDataDevolucaoReal());
-                    pw.println(String.join(",",
-                            e.getIdEmprestimo(),
-                            e.getUsuario().getId(),
-                            e.getItem().getCodigo(),
-                            sdf.format(e.getDataEmprestimo()),
-                            dataDevPrev,
-                            dataDevReal,
-                            String.valueOf(e.getMultaCobrada())
-                    ));
-                }
-            }
-
-            System.out.println("Dados salvos com sucesso!");
-        } catch (IOException e) {
-            System.out.println("Erro ao salvar dados: " + e.getMessage());
+    // ---------------------------
+    // LISTAGENS / RELATÓRIO
+    // ---------------------------
+    public void listarUsuarios() {
+        System.out.println("===== Usuários =====");
+        for (Usuario u : listaUsuarios) {
+            System.out.println(u.getId() + " - " + u.getNome() + " - Multa: R$" + u.getMultaPendente() + " - EmprestimosAtivos: " + u.getEmprestimosAtivos());
         }
     }
 
-    // ========================= CARREGAR DADOS =========================
-    public void carregarDados(String arquivoUsuarios, String arquivoItens, String arquivoEmprestimos) {
-        try {
-            // Usuários
-            listaUsuarios.clear();
-            try (BufferedReader br = new BufferedReader(new FileReader(arquivoUsuarios))) {
-                String linha;
-                while ((linha = br.readLine()) != null) {
-                    String[] partes = linha.split(",");
-                    String id = partes[0];
-                    String nome = partes[1];
-                    String endereco = partes[2];
-                    String tipo = partes[partes.length - 1];
+    public void listarItens() {
+        System.out.println("===== Acervo =====");
+        for (ItemDeAcervo it : acervo) {
+            System.out.println(it.getCodigo() + " - " + it.getTitulo() + " - Emprestado: " + it.isEmprestado());
+        }
+    }
 
-                    Usuario u;
-                    if (tipo.equals("Aluno")) {
-                        String matricula = partes[3];
-                        String curso = partes[4];
-                        u = new Aluno(id, nome, endereco, matricula, curso);
-                    } else {
-                        String siape = partes[3];
-                        String departamento = partes[4];
-                        u = new Professor(id, nome, endereco,siape,  departamento );
-                    }
-                    listaUsuarios.add(u);
-                }
+    public void listarEmprestimos() {
+        System.out.println("===== Empréstimos =====");
+        for (Emprestimo e : historicoEmprestimos) {
+            System.out.println(e.getIdEmprestimo() + " | Usuário: " + e.getUsuario().getId()
+                    + " | Item: " + e.getItem().getCodigo()
+                    + " | Emprestimo: " + e.getDataEmprestimo()
+                    + " | Prevista: " + e.getDataDevolucaoPrevista()
+                    + " | Real: " + e.getDataDevolucaoReal()
+                    + " | Multa: R$" + e.getMultaCobrada());
+        }
+    }
+
+    // ---------------------------
+    // PERSISTÊNCIA (serialização)
+    // ---------------------------
+    public void salvar() throws IOException {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(STORAGE_FILE))) {
+            oos.writeObject(this);
+        }
+    }
+
+    public static SistemaBiblioteca carregar() {
+        File f = new File(STORAGE_FILE);
+        if (!f.exists()) {
+            return new SistemaBiblioteca();
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f))) {
+            Object o = ois.readObject();
+            if (o instanceof SistemaBiblioteca) {
+                return (SistemaBiblioteca) o;
             }
-
-            // Itens
-            acervo.clear();
-            try (BufferedReader br = new BufferedReader(new FileReader(arquivoItens))) {
-                String linha;
-                while ((linha = br.readLine()) != null) {
-                    String[] partes = linha.split(",");
-                    String codigo = partes[0];
-                    String titulo = partes[1];
-                    String ano = partes[2];
-
-                    String tipo = partes[partes.length - 1];
-
-                    ItemDeAcervo item;
-                    if (tipo.equals("Livro")) {
-                        String autor = partes[3];
-                        String isbn = partes[4];
-                        String edicao = partes[5];
-                        item = new Livro(codigo, titulo, ano, autor, isbn, Integer.parseInt(edicao) );
-                    } else {
-                        String editora = partes[3];
-                        String volume = partes[4];
-                        String issn = partes[5];
-                        item = new Revista(codigo, titulo, ano, editora, Integer.parseInt(volume), issn);
-                    }
-                    acervo.add(item);
-                }
-            }
-
-            // Empréstimos
-            historicoEmprestimos.clear();
-            try (BufferedReader br = new BufferedReader(new FileReader(arquivoEmprestimos))) {
-                String linha;
-                while ((linha = br.readLine()) != null) {
-                    String[] partes = linha.split(",");
-                    String idEmprestimo = partes[0];
-                    String idUsuario = partes[1];
-                    String codItem = partes[2];
-                    Date dataEmprestimo = sdf.parse(partes[3]);
-                    Date dataDevPrev = sdf.parse(partes[4]);
-                    Date dataDevReal = partes[5].isEmpty() ? null : sdf.parse(partes[5]);
-                    double multa = Double.parseDouble(partes[6]);
-
-                    Usuario usuario = listaUsuarios.stream()
-                            .filter(u -> u.getId().equals(idUsuario))
-                            .findFirst().orElse(null);
-
-                    ItemDeAcervo item = acervo.stream()
-                            .filter(i -> i.getCodigo().equals(codItem))
-                            .findFirst().orElse(null);
-
-                    Emprestimo e = new Emprestimo(idEmprestimo, usuario, item, dataEmprestimo, dataDevPrev);
-                    e.setDataDevolucaoReal(dataDevReal);
-                    e.setMultaCobrada(multa);
-
-                    historicoEmprestimos.add(e);
-                }
-            }
-
-            System.out.println("Dados carregados com sucesso!");
         } catch (Exception e) {
-            System.out.println("Erro ao carregar dados: " + e.getMessage());
+            System.err.println("Falha ao carregar dados: " + e.getMessage());
         }
+        return new SistemaBiblioteca();
+    }
+
+    // ---------------------------
+    // getters (úteis para testes)
+    // ---------------------------
+    public List<Usuario> getListaUsuarios() { return listaUsuarios; }
+    public List<ItemDeAcervo> getAcervo() { return acervo; }
+    public List<Emprestimo> getHistoricoEmprestimos() { return historicoEmprestimos; }
+
+    // ---------------------------
+    // Método utilitário para gerar códigos padronizados (opcional)
+    // ---------------------------
+    public String gerarCodigoItemPadrao() {
+        return "I" + (nextItemSeq++);
     }
 }

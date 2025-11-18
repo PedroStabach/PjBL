@@ -6,13 +6,22 @@ abstract public class ItemDeAcervo {
     private String codigo;
     private String titulo;
     private String anoPublicacao;
-    private boolean isEmprestado = false;
     private Date dataEmprestimo;
+    private boolean isEmprestado = false;
+
+
 
     public ItemDeAcervo(String codigo, String titulo, String anoPublicacao) {
         this.codigo = codigo;
         this.titulo = titulo;
         this.anoPublicacao = anoPublicacao;
+    }
+    public boolean isEmprestado() {
+        return isEmprestado;
+    }
+
+    public void setEmprestado(boolean emprestado) {
+        this.isEmprestado = emprestado;
     }
 
     public String  getCodigo() {
@@ -32,12 +41,6 @@ abstract public class ItemDeAcervo {
     }
     public void setAnoPublicacao(String anoPublicacao) {
         this.anoPublicacao = anoPublicacao;
-    }
-    public boolean isEmprestado() {
-        return isEmprestado;
-    }
-    public void setEmprestado(boolean emprestado) {
-        isEmprestado = emprestado;
     }
     public Date getDataEmprestimo() {
         return dataEmprestimo;
