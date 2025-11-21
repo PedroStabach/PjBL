@@ -1,9 +1,10 @@
 package Models;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Professor extends Usuario {
-
+public class Professor extends Usuario implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String siape;
     private String departamento;
 

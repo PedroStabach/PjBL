@@ -1,14 +1,15 @@
 package Utils;
 
+import java.io.Serializable;
 import java.util.Date;
 
-abstract public class ItemDeAcervo {
+abstract public class ItemDeAcervo  implements Serializable {
     private String codigo;
     private String titulo;
     private String anoPublicacao;
     private Date dataEmprestimo;
     private boolean isEmprestado = false;
-
+    private static final long serialVersionUID = 1L;
 
 
     public ItemDeAcervo(String codigo, String titulo, String anoPublicacao) {

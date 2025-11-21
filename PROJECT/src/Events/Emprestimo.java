@@ -3,10 +3,11 @@ package Events;
 import Models.Usuario;
 import Utils.ItemDeAcervo;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Emprestimo {
-
+public class Emprestimo implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String idEmprestimo;
     private Usuario usuario;
     private ItemDeAcervo item;

@@ -1,9 +1,10 @@
 package Models;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Aluno extends Usuario {
-
+public class Aluno extends Usuario implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String matricula;
     private String curso;
 

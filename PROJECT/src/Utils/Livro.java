@@ -1,6 +1,9 @@
 package Utils;
 
-public class Livro extends ItemDeAcervo {
+import java.io.Serializable;
+
+public class Livro extends ItemDeAcervo implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String autor;
     private String isbn;
     private int edicao;

@@ -1,9 +1,10 @@
 package Models;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public abstract class Usuario {
-
+public abstract class Usuario  implements Serializable {
+    private static final long serialVersionUID = 1L;
     protected String id;
     protected String nome;
     protected String endereco;

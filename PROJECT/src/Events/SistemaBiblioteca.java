@@ -42,10 +42,7 @@ public class SistemaBiblioteca implements Serializable {
         return p;
     }
 
-    /**
-     * Observação: aqui assumimos que ItemDeAcervo implementa um construtor que aceita (codigo, titulo, ano, ...)
-     * e que tem getCodigo(). Se suas classes usam outro nome (getId/ getIsbnIssn), ajuste esse método ao seu modelo.
-     */
+
     public ItemDeAcervo cadastrarLivro(String codigo, String titulo, String ano, String autor, String isbn, int edicao) {
         Livro l = new Livro(codigo, titulo, ano, autor, isbn, edicao);
         acervo.add(l);
@@ -76,12 +73,7 @@ public class SistemaBiblioteca implements Serializable {
         }).findFirst();
     }
 
-    // ---------------------------
-    // EMPRÉSTIMO (RF1, RN1, RN2, RN4)
-    // ---------------------------
-    /**
-     * Tenta realizar um empréstimo; lança Exception com mensagem de negócio em caso de violação.
-     */
+
     public Emprestimo realizarEmprestimo(String idUsuario, String codigoItem) throws Exception {
         Usuario usuario = findUsuarioById(idUsuario);
         ItemDeAcervo item = findItemByCodigo(codigoItem);
@@ -131,10 +123,6 @@ public class SistemaBiblioteca implements Serializable {
         Date hoje = new Date();
         e.finalizarEmprestimo(hoje); // atualiza dataDevolucaoReal, calcula multa, atualiza item e usuario
 
-        // multa já foi adicionada ao usuário dentro do finalizarEmprestimo (se implementado assim),
-        // caso contrário faça:
-        // double multa = e.getMultaCobrada();
-        // e.getUsuario().adicionarMulta(multa);
     }
 
     // Permite pagar a multa do usuário (zerar)
@@ -243,9 +231,6 @@ public class SistemaBiblioteca implements Serializable {
     public List<ItemDeAcervo> getAcervo() { return acervo; }
     public List<Emprestimo> getHistoricoEmprestimos() { return historicoEmprestimos; }
 
-    // ---------------------------
-    // Método utilitário para gerar códigos padronizados (opcional)
-    // ---------------------------
     public String gerarCodigoItemPadrao() {
         return "I" + (nextItemSeq++);
     }
